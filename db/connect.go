@@ -17,6 +17,9 @@ func (p *Provider) Connect() (err error) {
 		return
 	}
 
+	db := os.Getenv("DB_NAME")
+	p.db = p.client.Database(db)
+
 	var result bson.M
 	if err = p.client.Database("admin").RunCommand(p.ctx, bson.D{{"ping", 1}}).Decode(&result); err != nil {
 		return

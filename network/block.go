@@ -25,7 +25,7 @@ func (p *Provider) Connect() (err error) {
 		return
 	}
 
-	// connect to mainnet lite servers
+	// connect to main-net lite servers
 	err = p.client.AddConnectionsFromConfig(p.ctx, cfg)
 	if err != nil {
 		return
@@ -33,11 +33,23 @@ func (p *Provider) Connect() (err error) {
 
 	// initialize ton api lite connection wrapper with full proof checks
 	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicySecure).WithRetry()
-	p.api.SetTrustedBlockFromConfig(cfg)
+
+	s := p.StateCollection()
+	blk := s.TrustedBlock()
+	if blk != nil {
+		p.api.SetTrustedBlock(blk)
+	} else {
+		p.api.SetTrustedBlockFromConfig(cfg)
+	}
 
 	p.log.Info("checking proofs since config init block, it may take near a minute...")
 
 	p.masterBlock, err = p.api.GetMasterchainInfo(p.ctx)
+	if err != nil {
+		return
+	}
+
+	err = s.SaveTrustedBlock(p.masterBlock)
 	if err != nil {
 		return
 	}
@@ -61,7 +73,7 @@ func (p *Provider) MasterBlockAt(seqNo uint32) (blk *ton.BlockIDExt, err error) 
 	return
 }
 
-func (p *Provider) BlockWatcher(starting *ton.BlockIDExt) error {
+func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) error {
 	master := starting
 	ctx := p.api.Client().StickyContext(p.ctx)
 	shardLastSeqNo := map[string]uint32{}
@@ -136,6 +148,8 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt) error {
 		if len(txList) == 0 {
 			p.log.Infow("No Tx found in block!", "seq-no", master.SeqNo)
 		}
+
+		rx <- &BlockWithTx{MasterBlock: master, TxList: txList}
 
 		master, err = p.MasterBlockAt(master.SeqNo + 1)
 		if err != nil {
