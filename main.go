@@ -3,20 +3,20 @@ package main
 import (
 	"github.com/observe-fi/indexer/app"
 	"github.com/observe-fi/indexer/db"
+	"github.com/observe-fi/indexer/indexer"
+	"github.com/observe-fi/indexer/network"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"time"
 )
 
 func main() {
 	app.MustLoadEnv()
-	//db.MustConnect(context.Background())
-	//
-	//network.MustConnect(context.Background())
-	//oldBlock := network.MasterBlockAt(context.Background(), 32600000)
-	//network.BlockWatcher(context.Background(), oldBlock)
 
-	fx.New(
-		fx.Provide(db.NewProvider, zap.NewProduction),
-		fx.Invoke(func(p *db.Provider) {}),
-	).Run()
+	fxApp := fx.New(
+		fx.Provide(db.NewProvider, network.NewProvider, zap.NewProduction, indexer.NewProvider),
+		fx.Invoke(func(p *indexer.Provider) {}),
+		fx.StartTimeout(2*time.Minute),
+	)
+	fxApp.Run()
 }

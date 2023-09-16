@@ -9,17 +9,19 @@ import (
 )
 
 type Provider struct {
-	client *liteclient.ConnectionPool
-	api    ton.APIClientWrapped
-	log    *zap.Logger
-	ctx    context.Context
+	client      *liteclient.ConnectionPool
+	api         ton.APIClientWrapped
+	log         *zap.SugaredLogger
+	ctx         context.Context
+	masterBlock *ton.BlockIDExt
 }
 
 func NewProvider(life fx.Lifecycle, log *zap.Logger) *Provider {
-	provider := &Provider{log: log}
+	provider := &Provider{log: log.Sugar()}
 	life.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			provider.ctx = ctx
+			// TODO: We should manage this better
+			provider.ctx = context.Background()
 			return provider.Connect()
 		},
 		OnStop: func(ctx context.Context) error {
