@@ -7,6 +7,6 @@ import (
 
 func LookupID(key string) *bson.M {
 	return &bson.M{
-		"h-id": util.HashID(key),
+		"hash-id": util.HashID(key),
 	}
 }
