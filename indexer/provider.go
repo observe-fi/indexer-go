@@ -24,29 +24,7 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider, net *netwo
 	life.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			provider.ctx = ctx
-			state := provider.StateCollection()
-			blk := state.LastBlock()
-			if blk == 0 {
-				stBlk := os.Getenv("START_BLOCK")
-				startBlk, err := strconv.ParseUint(stBlk, 10, 32)
-				blk = uint32(startBlk)
-				if err != nil {
-					return errors.New("unable to read start block")
-				}
-			}
-			master, err := net.MasterBlockAt(blk)
-			if err != nil {
-				return err
-			}
-
-			dataChannel := make(chan *network.BlockWithTx)
-			go func() {
-				for {
-					data := <-dataChannel
-					fmt.Println("Received data:", data)
-				}
-			}()
-			return net.BlockWatcher(master, dataChannel)
+			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			provider.ctx = ctx
@@ -54,4 +32,34 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider, net *netwo
 		},
 	})
 	return provider
+}
+
+func (p *Provider) Begin() error {
+	p.db.AwaitStart()
+
+	p.network.AwaitStart()
+
+	state := p.StateCollection()
+	blk := state.LastBlock()
+	if blk == 0 {
+		stBlk := os.Getenv("START_BLOCK")
+		startBlk, err := strconv.ParseUint(stBlk, 10, 32)
+		blk = uint32(startBlk)
+		if err != nil {
+			return errors.New("unable to read start block")
+		}
+	}
+	master, err := p.network.MasterBlockAt(blk)
+	if err != nil {
+		return err
+	}
+
+	dataChannel := make(chan *network.BlockWithTx)
+	go func() {
+		for {
+			data := <-dataChannel
+			fmt.Println("Received data:", data)
+		}
+	}()
+	return p.network.BlockWatcher(master, dataChannel)
 }

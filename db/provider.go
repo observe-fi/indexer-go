@@ -13,12 +13,16 @@ type Provider struct {
 	log         *zap.Logger
 	ctx         context.Context
 	collections map[string]*Collection
+	started     bool
+	startCh     chan bool
 }
 
 func NewProvider(life fx.Lifecycle, log *zap.Logger) *Provider {
 	provider := &Provider{
 		log:         log,
 		collections: map[string]*Collection{},
+		started:     false,
+		startCh:     make(chan bool),
 	}
 	life.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
@@ -27,6 +31,8 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger) *Provider {
 			if e != nil {
 				return e
 			}
+			provider.started = true
+			provider.startCh <- true
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -35,4 +41,11 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger) *Provider {
 		},
 	})
 	return provider
+}
+
+func (p *Provider) AwaitStart() {
+	if p.started {
+		return
+	}
+	<-p.startCh
 }

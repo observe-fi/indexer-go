@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/util"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -26,13 +27,6 @@ func (p *Provider) StateCollection() *State {
 	}
 }
 
-func createState[V any](key string, value V) *StateValue[V] {
-	return &StateValue[V]{
-		HashID: util.HashID(key),
-		Value:  value,
-	}
-}
-
 func (state *State) LastBlock() uint32 {
 	var value StateValue[uint32]
 	e := state.ReadID(context.Background(), "last-block", &value)
@@ -51,8 +45,25 @@ func getState[V any](state *State, key string) *StateValue[V] {
 	return &value
 }
 
+func createState[V any](key string, value V) *StateValue[V] {
+	return &StateValue[V]{
+		ID:     primitive.NewObjectID(),
+		HashID: util.HashID(key),
+		Value:  value,
+	}
+}
+
 func setState[V any](state *State, key string, value V) error {
-	return state.Upsert(db.LookupID(key), createState(key, value))
+	var st StateValue[V]
+	stv := &st
+	err := state.ReadID(context.Background(), key, stv)
+	if err != nil {
+		stv = createState(key, value)
+		return state.Create(stv)
+	} else {
+		stv.Value = value
+		return state.Update(context.Background(), db.LookupID(key), &bson.M{"$set": stv})
+	}
 }
 
 func (state *State) SetLastBlock(seqNo uint32) error {
