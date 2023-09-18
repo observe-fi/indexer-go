@@ -31,8 +31,10 @@ func (p *Provider) Connect() (err error) {
 		return
 	}
 
-	// initialize ton api lite connection wrapper with full proof checks
-	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicySecure).WithRetry()
+	// initialize ton api lite connection wrapper without proof checks
+	// TODO: Fix this security issue, maybe by decoupling clients
+	// Why this is happening? => Because we want to get account states too which may have no proofs for specific blocks on liteservers
+	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicyUnsafe).WithRetry()
 
 	s := p.StateCollection()
 	blk := s.TrustedBlock()
@@ -76,6 +78,7 @@ func (p *Provider) MasterBlockAt(seqNo uint32) (blk *ton.BlockIDExt, err error) 
 func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) error {
 	master := starting
 	ctx := p.api.Client().StickyContext(p.ctx)
+
 	shardLastSeqNo := map[string]uint32{}
 
 	firstShards, err := p.api.GetBlockShardsInfo(ctx, master)
@@ -109,7 +112,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 		newShards = append(newShards, master)
 
 		var txList []*tlb.Transaction
-
+		accounts := make(map[string]*tlb.Account)
 		// for each shard block getting transactions
 		for _, shard := range newShards {
 			p.log.Infow("Scanning block", "seq-no", shard.SeqNo, "shard", uint64(shard.Shard), "workchain", shard.Workchain)
@@ -132,9 +135,19 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 
 				for _, id := range fetchedIDs {
 					// get full transaction by id
-					tx, err := p.api.GetTransaction(ctx, shard, address.NewAddress(0, byte(shard.Workchain), id.Account), id.LT)
+					addr := address.NewAddress(0, byte(shard.Workchain), id.Account)
+					tx, err := p.api.GetTransaction(ctx, shard, addr, id.LT)
 					if err != nil {
 						return err
+					}
+					// get transaction account - for account based indexing
+					_, ok := accounts[addr.String()]
+					if !ok {
+						acc, err := p.api.GetAccount(ctx, shard, addr)
+						if err != nil {
+							return err
+						}
+						accounts[addr.String()] = acc
 					}
 					txList = append(txList, tx)
 				}
@@ -149,7 +162,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 			p.log.Infow("No Tx found in block!", "seq-no", master.SeqNo)
 		}
 
-		rx <- &BlockWithTx{MasterBlock: master, TxList: txList}
+		rx <- &BlockWithTx{MasterBlock: master, TxList: txList, Accounts: accounts}
 
 		master, err = p.MasterBlockAt(master.SeqNo + 1)
 		if err != nil {
