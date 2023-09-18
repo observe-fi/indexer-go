@@ -10,14 +10,15 @@ import (
 )
 
 type Provider struct {
-	client      *liteclient.ConnectionPool
-	api         ton.APIClientWrapped
-	log         *zap.SugaredLogger
-	ctx         context.Context
-	masterBlock *ton.BlockIDExt
-	db          *db.Provider
-	started     bool
-	startCh     chan bool
+	client       *liteclient.ConnectionPool
+	api          ton.APIClientWrapped
+	uncheckedApi ton.APIClientWrapped
+	log          *zap.SugaredLogger
+	ctx          context.Context
+	masterBlock  *ton.BlockIDExt
+	db           *db.Provider
+	started      bool
+	startCh      chan bool
 }
 
 func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider) *Provider {

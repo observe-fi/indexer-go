@@ -31,10 +31,12 @@ func (p *Provider) Connect() (err error) {
 		return
 	}
 
-	// initialize ton api lite connection wrapper without proof checks
-	// TODO: Fix this security issue, maybe by decoupling clients
+	// initialize ton api lite connection wrapper with full proof checks
+	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicySecure).WithRetry()
+	// Init an unchecked proofs api
 	// Why this is happening? => Because we want to get account states too which may have no proofs for specific blocks on liteservers
-	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicyUnsafe).WithRetry()
+	// TODO: Maybe make this more secure?!
+	p.uncheckedApi = ton.NewAPIClient(p.client, ton.ProofCheckPolicyUnsafe).WithRetry()
 
 	s := p.StateCollection()
 	blk := s.TrustedBlock()
@@ -78,6 +80,7 @@ func (p *Provider) MasterBlockAt(seqNo uint32) (blk *ton.BlockIDExt, err error) 
 func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) error {
 	master := starting
 	ctx := p.api.Client().StickyContext(p.ctx)
+	ctxUnchecked := p.uncheckedApi.Client().StickyContext(p.ctx)
 
 	shardLastSeqNo := map[string]uint32{}
 
@@ -143,7 +146,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 					// get transaction account - for account based indexing
 					_, ok := accounts[addr.String()]
 					if !ok {
-						acc, err := p.api.GetAccount(ctx, shard, addr)
+						acc, err := p.uncheckedApi.GetAccount(ctxUnchecked, shard, addr)
 						if err != nil {
 							return err
 						}
