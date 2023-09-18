@@ -27,12 +27,14 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider) *Provider 
 		OnStart: func(ctx context.Context) error {
 			// TODO: We should manage this better
 			provider.ctx = context.Background()
-			e := provider.Connect()
-			if e != nil {
-				return e
-			}
-			provider.started = true
-			provider.startCh <- true
+			go func() {
+				e := provider.Connect()
+				if e != nil {
+					panic(e)
+				}
+				provider.started = true
+				provider.startCh <- true
+			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

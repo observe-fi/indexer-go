@@ -3,12 +3,14 @@ package network
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/util"
 	"github.com/xssnick/tonutils-go/tl"
 	"github.com/xssnick/tonutils-go/ton"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"os"
 )
 
 type State struct {
@@ -22,7 +24,7 @@ type StateValue[V any] struct {
 }
 
 func (p *Provider) StateCollection() *State {
-	c := p.db.LoadCollection("network-state")
+	c := p.db.LoadCollection(fmt.Sprintf("network-state-%s", os.Getenv("NETWORK")))
 	return &State{
 		c,
 	}

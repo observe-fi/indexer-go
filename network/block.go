@@ -15,7 +15,7 @@ func (p *Provider) Connect() (err error) {
 
 	var url string
 	if app.IsTestnet() {
-		url = "https://ton-blockchain.github.io/testnet-global.config.json"
+		url = "https://ton.org/testnet-global.config.json"
 	} else {
 		url = "https://ton.org/global.config.json"
 	}

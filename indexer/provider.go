@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/network"
+	"github.com/xssnick/tonutils-go/ton"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"os"
@@ -18,6 +19,8 @@ type Provider struct {
 	log     *zap.SugaredLogger
 	ctx     context.Context
 }
+
+const LastPossibleBlock uint32 = 0xffffffff - 1
 
 func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider, net *network.Provider) *Provider {
 	provider := &Provider{log: log.Sugar(), db: db, network: net}
@@ -43,15 +46,27 @@ func (p *Provider) Begin() error {
 	blk := state.LastBlock()
 	if blk == 0 {
 		stBlk := os.Getenv("START_BLOCK")
-		startBlk, err := strconv.ParseUint(stBlk, 10, 32)
-		blk = uint32(startBlk)
-		if err != nil {
-			return errors.New("unable to read start block")
+		if stBlk == "-1" {
+			// We're starting from last block known
+			blk = LastPossibleBlock
+		} else {
+			startBlk, err := strconv.ParseUint(stBlk, 10, 32)
+			blk = uint32(startBlk)
+			if err != nil {
+				return errors.New("unable to read start block")
+			}
 		}
 	}
-	master, err := p.network.MasterBlockAt(blk)
-	if err != nil {
-		return err
+	var masterAt *ton.BlockIDExt
+
+	if blk == LastPossibleBlock {
+		masterAt = p.network.CurrentMasterBlock()
+	} else {
+		var err error
+		masterAt, err = p.network.MasterBlockAt(blk)
+		if err != nil {
+			return err
+		}
 	}
 
 	dataChannel := make(chan *network.BlockWithTx)
@@ -61,5 +76,5 @@ func (p *Provider) Begin() error {
 			fmt.Println("Received data:", data)
 		}
 	}()
-	return p.network.BlockWatcher(master, dataChannel)
+	return p.network.BlockWatcher(masterAt, dataChannel)
 }
