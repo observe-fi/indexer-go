@@ -89,5 +89,5 @@ func (m *Match) FilterBlock(block *network.BlockWithTx) *network.BlockWithTx {
 			newBlock.TxAccounts[hb64] = addr
 		}
 	}
-	return block
+	return newBlock
 }
