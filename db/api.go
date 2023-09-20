@@ -18,13 +18,13 @@ func (p *Provider) LoadCollection(name string) *Collection {
 }
 
 func (c *Collection) Create(document interface{}) error {
-	_, err := c.col.InsertOne(c.provider.ctx, document)
+	_, err := c.col.InsertOne(context.Background(), document)
 	return err
 }
 
 func (c *Collection) Upsert(filter interface{}, document interface{}) error {
 	opts := options.Update().SetUpsert(true)
-	_, err := c.col.UpdateOne(c.provider.ctx, filter, document, opts)
+	_, err := c.col.UpdateOne(context.Background(), filter, document, opts)
 	return err
 }
 
