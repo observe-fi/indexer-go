@@ -60,7 +60,7 @@ func (c *Collection) Update(ctx context.Context, filter interface{}, update inte
 		return err
 	}
 
-	if updateResult.ModifiedCount == 0 {
+	if updateResult.MatchedCount == 0 {
 		return errors.New("no document found to update")
 	}
 

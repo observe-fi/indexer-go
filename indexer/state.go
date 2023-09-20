@@ -3,11 +3,13 @@ package indexer
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"os"
 )
 
 type State struct {
@@ -21,7 +23,7 @@ type StateValue[V any] struct {
 }
 
 func (p *Provider) StateCollection() *State {
-	c := p.db.LoadCollection("indexer-state")
+	c := p.db.LoadCollection(fmt.Sprintf("indexer-state-%s", os.Getenv("NETWORK")))
 	return &State{
 		c,
 	}
@@ -62,7 +64,8 @@ func setState[V any](state *State, key string, value V) error {
 		return state.Create(stv)
 	} else {
 		stv.Value = value
-		return state.Update(context.Background(), db.LookupID(key), &bson.M{"$set": stv})
+		//fmt.Println(db.LookupID(key), key, stv)
+		return state.Update(context.Background(), bson.M{"_id": stv.ID}, &bson.M{"$set": stv})
 	}
 }
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/observe-fi/indexer/app"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/indexer"
@@ -19,7 +18,7 @@ func main() {
 			go func() {
 				err := p.Begin()
 				if err != nil {
-					fmt.Println(err)
+					panic(err)
 					// TODO: Handle Error
 				}
 			}()

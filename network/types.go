@@ -8,5 +8,6 @@ import (
 type BlockWithTx struct {
 	MasterBlock *ton.BlockIDExt
 	TxList      []*tlb.Transaction
+	TxAccounts  map[string]string
 	Accounts    map[string]*tlb.Account
 }

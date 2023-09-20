@@ -116,6 +116,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 
 		var txList []*tlb.Transaction
 		accounts := make(map[string]*tlb.Account)
+		txAccounts := make(map[string]string)
 		// for each shard block getting transactions
 		for _, shard := range newShards {
 			p.log.Infow("Scanning block", "seq-no", shard.SeqNo, "shard", uint64(shard.Shard), "workchain", shard.Workchain)
@@ -152,6 +153,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 						}
 						accounts[addr.String()] = acc
 					}
+					txAccounts[base64.StdEncoding.EncodeToString(tx.Hash)] = addr.String()
 					txList = append(txList, tx)
 				}
 			}
@@ -165,7 +167,7 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 			p.log.Infow("No Tx found in block!", "seq-no", master.SeqNo)
 		}
 
-		rx <- &BlockWithTx{MasterBlock: master, TxList: txList, Accounts: accounts}
+		rx <- &BlockWithTx{MasterBlock: master, TxList: txList, Accounts: accounts, TxAccounts: txAccounts}
 
 		master, err = p.MasterBlockAt(master.SeqNo + 1)
 		if err != nil {
@@ -178,8 +180,8 @@ func getShardID(shard *ton.BlockIDExt) string {
 	return fmt.Sprintf("%d|%d", shard.Workchain, shard.Shard)
 }
 
-func (p *Provider) getNotSeenShards(shard *ton.BlockIDExt, shardLastSeqno map[string]uint32) (ret []*ton.BlockIDExt, err error) {
-	if no, ok := shardLastSeqno[getShardID(shard)]; ok && no == shard.SeqNo {
+func (p *Provider) getNotSeenShards(shard *ton.BlockIDExt, shardLastSeqNo map[string]uint32) (ret []*ton.BlockIDExt, err error) {
+	if no, ok := shardLastSeqNo[getShardID(shard)]; ok && no == shard.SeqNo {
 		return nil, nil
 	}
 
@@ -194,7 +196,7 @@ func (p *Provider) getNotSeenShards(shard *ton.BlockIDExt, shardLastSeqno map[st
 	}
 
 	for _, parent := range parents {
-		ext, err := p.getNotSeenShards(parent, shardLastSeqno)
+		ext, err := p.getNotSeenShards(parent, shardLastSeqNo)
 		if err != nil {
 			return nil, err
 		}

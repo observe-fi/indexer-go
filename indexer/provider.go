@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/observe-fi/indexer/db"
@@ -58,7 +59,7 @@ func (p *Provider) Begin() error {
 		}
 	}
 	var masterAt *ton.BlockIDExt
-
+	fmt.Println(blk)
 	if blk == LastPossibleBlock {
 		masterAt = p.network.CurrentMasterBlock()
 	} else {
@@ -69,11 +70,42 @@ func (p *Provider) Begin() error {
 		}
 	}
 
+	match := p.MatchCollection()
+	err := match.Load()
+	if err != nil {
+		return err
+	}
+
 	dataChannel := make(chan *network.BlockWithTx)
 	go func() {
+		txs := p.TxCollection()
+		accounts := p.AccountsCollection()
+
 		for {
-			data := <-dataChannel
-			fmt.Println("Received data:", data)
+			block := <-dataChannel
+			fBlock := match.FilterBlock(block)
+
+			for _, acc := range fBlock.Accounts {
+				e := accounts.Store(acc)
+				if e != nil {
+					panic(e)
+				}
+			}
+
+			for _, tx := range fBlock.TxList {
+				addr := fBlock.TxAccounts[base64.StdEncoding.EncodeToString(tx.Hash)]
+				e := txs.Store(tx, addr)
+				if e != nil {
+					panic(e)
+				}
+			}
+
+			fmt.Println("Received block:", block)
+
+			e := state.SetLastBlock(block.MasterBlock.SeqNo)
+			if e != nil {
+				panic(e)
+			}
 		}
 	}()
 	return p.network.BlockWatcher(masterAt, dataChannel)
