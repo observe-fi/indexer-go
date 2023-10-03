@@ -70,7 +70,7 @@ func (p *Provider) CurrentMasterBlock() *ton.BlockIDExt {
 }
 
 func (p *Provider) MasterBlockAt(seqNo uint32) (blk *ton.BlockIDExt, err error) {
-	blk, err = p.api.LookupBlock(p.ctx, p.masterBlock.Workchain, p.masterBlock.Shard, seqNo)
+	blk, err = p.api.WaitForBlock(seqNo).LookupBlock(p.ctx, p.masterBlock.Workchain, p.masterBlock.Shard, seqNo)
 	if err != nil {
 		return
 	}

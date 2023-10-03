@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/observe-fi/indexer/db"
 	"github.com/xssnick/tonutils-go/tlb"
+	"github.com/xssnick/tonutils-go/tvm/cell"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
@@ -32,6 +33,13 @@ func (p *Provider) AccountsCollection() *Accounts {
 	}
 }
 
+func encodeCell(c *cell.Cell) string {
+	if c == nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(c.ToBOC())
+}
+
 func (accounts *Accounts) Store(acc *tlb.Account) error {
 	nAcc := Account{
 		ID:      primitive.NewObjectID(),
@@ -39,8 +47,8 @@ func (accounts *Accounts) Store(acc *tlb.Account) error {
 		Address: acc.State.Address.String(),
 		Status:  acc.State.Status,
 		Balance: acc.State.Balance.Nano().String(),
-		Data:    base64.StdEncoding.EncodeToString(acc.Data.ToBOC()),
-		Code:    base64.StdEncoding.EncodeToString(acc.Code.ToBOC()),
+		Data:    encodeCell(acc.Data),
+		Code:    encodeCell(acc.Code),
 	}
 	var account Account
 	e := accounts.ReadOne(context.Background(), &bson.M{"address": acc.State.Address.String()}, &account)

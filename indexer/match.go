@@ -72,6 +72,10 @@ func (m *Match) Matches(tx *tlb.Transaction, account *tlb.Account, addr string) 
 }
 
 func (m *Match) FilterBlock(block *network.BlockWithTx) *network.BlockWithTx {
+	if os.Getenv("STORAGE_STRATEGY") == "STORE_ALL" {
+		return block
+	}
+
 	newBlock := &network.BlockWithTx{
 		MasterBlock: block.MasterBlock,
 		TxList:      make([]*tlb.Transaction, 0),

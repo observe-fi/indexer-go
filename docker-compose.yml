@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  indexer-go:
+    container_name: indexer-go
+    restart: always
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    network_mode: host
