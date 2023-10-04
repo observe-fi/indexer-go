@@ -40,16 +40,27 @@ func encodeCell(c *cell.Cell) string {
 	return base64.StdEncoding.EncodeToString(c.ToBOC())
 }
 
-func (accounts *Accounts) Store(acc *tlb.Account) error {
+func safeAccount(addr string, acc *tlb.Account) Account {
 	nAcc := Account{
 		ID:      primitive.NewObjectID(),
 		Active:  acc.IsActive,
-		Address: acc.State.Address.String(),
-		Status:  acc.State.Status,
-		Balance: acc.State.Balance.Nano().String(),
+		Address: addr,
 		Data:    encodeCell(acc.Data),
 		Code:    encodeCell(acc.Code),
 	}
+
+	if acc.State == nil {
+		nAcc.Status = tlb.AccountStatusNonExist
+		nAcc.Balance = "0"
+	} else {
+		nAcc.Status = acc.State.Status
+		nAcc.Balance = acc.State.Balance.Nano().String()
+	}
+	return nAcc
+}
+
+func (accounts *Accounts) Store(acc *tlb.Account, addr string) error {
+	nAcc := safeAccount(addr, acc)
 	var account Account
 	e := accounts.ReadOne(context.Background(), &bson.M{"address": acc.State.Address.String()}, &account)
 	if e != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/network"
 	"github.com/xssnick/tonutils-go/tlb"
+	"github.com/xssnick/tonutils-go/tvm/cell"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
@@ -38,6 +39,13 @@ func (p *Provider) MatchCollection() *Match {
 	}
 }
 
+func HashCell(c *cell.Cell) string {
+	if c == nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(c.Hash())
+}
+
 func (m *Match) Load() error {
 	var res []MatchCondition
 	e := m.ReadAll(context.Background(), bson.M{}, &res)
@@ -52,7 +60,7 @@ func (m *MatchCondition) Matches(tx *tlb.Transaction, account *tlb.Account, addr
 	var h string
 
 	if m.Type == CodeMatch {
-		h = base64.StdEncoding.EncodeToString(account.Code.Hash())
+		h = HashCell(account.Code)
 	} else if m.Type == TxMatch {
 		h = base64.StdEncoding.EncodeToString(tx.Hash)
 	} else if m.Type == AddressMatch {

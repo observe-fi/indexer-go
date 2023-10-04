@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/network"
+	"github.com/observe-fi/indexer/util"
 	"github.com/xssnick/tonutils-go/ton"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -36,6 +37,45 @@ func NewProvider(life fx.Lifecycle, log *zap.Logger, db *db.Provider, net *netwo
 		},
 	})
 	return provider
+}
+
+func (p *Provider) CheckBlock(dataChannel chan *network.BlockWithTx) error {
+	match := p.MatchCollection()
+	state := p.StateCollection()
+	err := match.Load()
+	if err != nil {
+		return err
+	}
+
+	txs := p.TxCollection()
+	accounts := p.AccountsCollection()
+
+	for {
+		block := <-dataChannel
+		fBlock := match.FilterBlock(block)
+
+		for addr, acc := range fBlock.Accounts {
+			e := accounts.Store(acc, addr)
+			if e != nil {
+				return e
+			}
+		}
+
+		for _, tx := range fBlock.TxList {
+			addr := fBlock.TxAccounts[base64.StdEncoding.EncodeToString(tx.Hash)]
+			e := txs.Store(tx, addr)
+			if e != nil {
+				return e
+			}
+		}
+
+		fmt.Println("Received block:", block)
+
+		e := state.SetLastBlock(block.MasterBlock.SeqNo)
+		if e != nil {
+			return e
+		}
+	}
 }
 
 func (p *Provider) Begin() error {
@@ -78,34 +118,9 @@ func (p *Provider) Begin() error {
 
 	dataChannel := make(chan *network.BlockWithTx)
 	go func() {
-		txs := p.TxCollection()
-		accounts := p.AccountsCollection()
-
-		for {
-			block := <-dataChannel
-			fBlock := match.FilterBlock(block)
-
-			for _, acc := range fBlock.Accounts {
-				e := accounts.Store(acc)
-				if e != nil {
-					panic(e)
-				}
-			}
-
-			for _, tx := range fBlock.TxList {
-				addr := fBlock.TxAccounts[base64.StdEncoding.EncodeToString(tx.Hash)]
-				e := txs.Store(tx, addr)
-				if e != nil {
-					panic(e)
-				}
-			}
-
-			fmt.Println("Received block:", block)
-
-			e := state.SetLastBlock(block.MasterBlock.SeqNo)
-			if e != nil {
-				panic(e)
-			}
+		e := p.CheckBlock(dataChannel)
+		if e != nil {
+			util.Halt(err)
 		}
 	}()
 	return p.network.BlockWatcher(masterAt, dataChannel)

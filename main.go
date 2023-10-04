@@ -5,6 +5,7 @@ import (
 	"github.com/observe-fi/indexer/db"
 	"github.com/observe-fi/indexer/indexer"
 	"github.com/observe-fi/indexer/network"
+	"github.com/observe-fi/indexer/util"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -18,7 +19,7 @@ func main() {
 			go func() {
 				err := p.Begin()
 				if err != nil {
-					panic(err)
+					util.Halt(err)
 					// TODO: Handle Error
 				}
 			}()
