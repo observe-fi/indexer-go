@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/observe-fi/indexer/db"
+	"github.com/observe-fi/indexer/util"
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/tvm/cell"
 	"go.mongodb.org/mongo-driver/bson"
@@ -62,7 +63,7 @@ func safeAccount(addr string, acc *tlb.Account) Account {
 func (accounts *Accounts) Store(acc *tlb.Account, addr string) error {
 	nAcc := safeAccount(addr, acc)
 	var account Account
-	e := accounts.ReadOne(context.Background(), &bson.M{"address": acc.State.Address.String()}, &account)
+	e := accounts.ReadOne(context.Background(), &bson.M{"address": util.AddressToRaw(acc.State.Address)}, &account)
 	if e != nil {
 		// We don't have this account [MOST PROBABLY]
 		e = accounts.Create(nAcc)

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/observe-fi/indexer/app"
+	"github.com/observe-fi/indexer/util"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
 	"github.com/xssnick/tonutils-go/tlb"
@@ -32,7 +33,7 @@ func (p *Provider) Connect() (err error) {
 	}
 
 	// initialize ton api lite connection wrapper with full proof checks
-	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicySecure).WithRetry()
+	p.api = ton.NewAPIClient(p.client, ton.ProofCheckPolicyUnsafe).WithRetry()
 	// Init an unchecked proofs api
 	// Why this is happening? => Because we want to get account states too which may have no proofs for specific blocks on liteservers
 	// TODO: Maybe make this more secure?!
@@ -145,15 +146,15 @@ func (p *Provider) BlockWatcher(starting *ton.BlockIDExt, rx chan *BlockWithTx) 
 						return err
 					}
 					// get transaction account - for account based indexing
-					_, ok := accounts[addr.String()]
+					_, ok := accounts[util.AddressToRaw(addr)]
 					if !ok {
 						acc, err := p.uncheckedApi.GetAccount(ctxUnchecked, shard, addr)
 						if err != nil {
 							return err
 						}
-						accounts[addr.String()] = acc
+						accounts[util.AddressToRaw(addr)] = acc
 					}
-					txAccounts[base64.StdEncoding.EncodeToString(tx.Hash)] = addr.String()
+					txAccounts[base64.StdEncoding.EncodeToString(tx.Hash)] = util.AddressToRaw(addr)
 					txList = append(txList, tx)
 				}
 			}

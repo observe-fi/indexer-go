@@ -48,6 +48,7 @@ func (p *Provider) CheckBlock(dataChannel chan *network.BlockWithTx) error {
 	}
 
 	txs := p.TxCollection()
+	messages := p.MsgCollection()
 	accounts := p.AccountsCollection()
 
 	for {
@@ -63,7 +64,7 @@ func (p *Provider) CheckBlock(dataChannel chan *network.BlockWithTx) error {
 
 		for _, tx := range fBlock.TxList {
 			addr := fBlock.TxAccounts[base64.StdEncoding.EncodeToString(tx.Hash)]
-			e := txs.Store(tx, addr)
+			e := txs.Store(messages, tx, addr, fBlock.MasterBlock.SeqNo)
 			if e != nil {
 				return e
 			}

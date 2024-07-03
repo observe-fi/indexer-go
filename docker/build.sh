@@ -1,0 +1,1 @@
+docker buildx build --platform linux/amd64 . --tag ar0x443/observe-indexer:latest

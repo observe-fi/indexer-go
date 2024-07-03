@@ -5,6 +5,4 @@ services:
     container_name: indexer-go
     restart: always
     image: ar0x443/observe-indexer:latest
-    build:
-      context: .
     network_mode: host

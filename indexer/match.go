@@ -65,6 +65,9 @@ func (m *MatchCondition) Matches(tx *tlb.Transaction, account *tlb.Account, addr
 		h = base64.StdEncoding.EncodeToString(tx.Hash)
 	} else if m.Type == AddressMatch {
 		h = addr
+		//h, _ = util.AddressToRawS(addr)
+		//fmt.Println("Using addr match", h, addr)
+		//h = h2
 	}
 
 	return h == m.TargetValue
