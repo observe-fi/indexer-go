@@ -209,6 +209,7 @@ func (txs *Txs) Store(messages *Messages, tx *tlb.Transaction, addr string, bloc
 	processedMessages := ExtractTxMessages(tx)
 	ids := make([]primitive.ObjectID, 0)
 	txValueFlow := float64(0)
+	txId := primitive.NewObjectID()
 	for _, item := range processedMessages {
 		// Let's calculate value flow
 		if item.Out {
@@ -216,7 +217,7 @@ func (txs *Txs) Store(messages *Messages, tx *tlb.Transaction, addr string, bloc
 		} else {
 			txValueFlow += item.ValueF
 		}
-
+		item.ParentTx = txId
 		e = messages.Store(item)
 		if e != nil {
 			return
@@ -227,7 +228,7 @@ func (txs *Txs) Store(messages *Messages, tx *tlb.Transaction, addr string, bloc
 	txValueFlow -= feeF
 
 	nTx := Tx{
-		ID:          primitive.NewObjectID(),
+		ID:          txId,
 		Address:     addr,
 		Now:         tx.Now,
 		OrigStatus:  tx.OrigStatus,

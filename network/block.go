@@ -18,6 +18,7 @@ func (p *Provider) Connect() (err error) {
 	if app.IsTestnet() {
 		url = "https://ton.org/testnet-global.config.json"
 	} else {
+		//url = "https://gist.githubusercontent.com/AminRezaei0x443/ac8e80445caa237079eccae393ac7141/raw/19e108f4edf4fb02219a2b1c40d077c57639f113/mconfig.json"
 		url = "https://ton.org/global.config.json"
 	}
 
@@ -26,8 +27,17 @@ func (p *Provider) Connect() (err error) {
 		return
 	}
 
-	// connect to main-net lite servers
+	// connect to own main-net lite server
+	cfg.Liteservers = []liteclient.LiteserverConfig{
+		{
+			IP:   1091907241,
+			Port: 43679,
+			ID:   liteclient.ServerID{Type: "pub.ed25519", Key: "2hef50RQss2j7nZ5kZ8UoMhdN1GVx1dsGGae3t0rKa4="},
+		},
+	}
+
 	err = p.client.AddConnectionsFromConfig(p.ctx, cfg)
+
 	if err != nil {
 		return
 	}
