@@ -1,6 +1,6 @@
 # Indexer-Go
 
-This repository contains the initial version of our indexer that acts as a PoC which will let us build other parts of the system upon it. The final version will be heavily optimized and the choice of technologies may change. This codebase uses `fx` for dependency injection.
+This repository contains our streaming indexer that receives the blocks actively by watching the liteservers. This codebase uses `fx` for dependency injection.
 
 ## Quickstart
 1. Spawn a mongo instance on your system or do it on cloud.
@@ -13,16 +13,19 @@ START_BLOCK=-1
 DB_NAME=indexer
 STORAGE_STRATEGY=STORE_ALL
 ```
-4. Run:
+### Run with Docker
+```sh
+docker compose up -d
+```
+
+### Run without docker:
 ```shell
 go mod download
 go build -o /indexer-go
 ./indexer-go
 ```
 
-***Experimental: Alternatively, you can use the docker files in the repo, they may need some adjustment***
-
-The tool will start to monitor blocks on the specified network from the block you specified, setup with a auto-restart capable manager, either docker or sth like `pm2`.
+The tool will start to monitor blocks on the specified network from the block you specified, set up with an auto-restart capable manager, either docker or sth like `pm2`.
 
 ## Adding filters
 You can change `STORAGE_STRATEGY` to `OPTIMIZED` and add documents to the `indexer-match-{network}` collection. The tool will only store the transactions with satisfying conditions. Schema:
@@ -36,4 +39,4 @@ You can change `STORAGE_STRATEGY` to `OPTIMIZED` and add documents to the `index
 ```
 
 ## Future
-Right now, this tool is mostly intended for internal use of our project, and it will have complete documentation and an easy-to-use interface in near future. 
+Right now, this tool is mostly intended for internal use of our project.
